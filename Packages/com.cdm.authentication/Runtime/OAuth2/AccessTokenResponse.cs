@@ -17,6 +17,13 @@ namespace Cdm.Authentication.OAuth2
         public string accessToken { get; set; }
 
         /// <summary>
+        /// Gets or sets the id token.
+        /// </summary>
+        [Preserve]
+        [DataMember(Name = "id_token")]
+        public string idToken { get; set; }
+
+        /// <summary>
         /// Gets or sets the refresh token which can be used to obtain a new access token.
         /// </summary>
         [Preserve]
