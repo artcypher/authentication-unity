@@ -26,8 +26,10 @@ namespace Cdm.Authentication.Clients
                 }, null);
             
             var authenticationHeader = accessTokenResponse.GetAuthenticationHeader();
+            string fullUserInfoUrl = userInfoUrl + $"?fields=email&access_token={accessTokenResponse.accessToken}";
+
             return await UserInfoParser.GetUserInfoAsync<FacebookUserInfo>(
-                httpClient, userInfoUrl, authenticationHeader, cancellationToken);
+                httpClient, fullUserInfoUrl, authenticationHeader, cancellationToken);
         }
     }
     
