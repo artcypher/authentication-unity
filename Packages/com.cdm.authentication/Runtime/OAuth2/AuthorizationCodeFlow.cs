@@ -331,6 +331,9 @@ namespace Cdm.Authentication.OAuth2
             /// </remarks>
             [DataMember(Name = "redirect_uri")]
             public string redirectUri { get; set; }
+
+            [DataMember(Name = "local_redirect_uri")]
+            public string localRedirectUri { get; set; }
         }
     }
 }

@@ -52,7 +52,7 @@ namespace Cdm.Authentication.OAuth2
                 // 1. Create authorization request URL.
                 Debug.Log("Making authorization request...");
 
-                var redirectUrl = _client.configuration.redirectUri;
+                var localRedirectUrl = _client.configuration.localRedirectUri;
                 var authorizationUrl = _client.GetAuthorizationUrl();
 
                 // 2. Get authorization code grant using login form in the browser.
@@ -63,7 +63,7 @@ namespace Cdm.Authentication.OAuth2
                     cancellationToken, timeoutCancellationTokenSource.Token);
 
                 var browserResult =
-                    await _browser.StartAsync(authorizationUrl, redirectUrl, loginCancellationTokenSource.Token);
+                    await _browser.StartAsync(authorizationUrl, localRedirectUrl, loginCancellationTokenSource.Token);
                 if (browserResult.status == BrowserStatus.Success)
                 {
                     // 3. Exchange authorization code for access and refresh tokens.
