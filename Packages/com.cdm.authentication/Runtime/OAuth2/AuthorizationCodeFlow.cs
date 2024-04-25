@@ -11,6 +11,7 @@ using System.Web;
 using Cdm.Authentication.Utils;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace Cdm.Authentication.OAuth2
 {
@@ -241,16 +242,41 @@ namespace Cdm.Authentication.OAuth2
             var authString = $"{configuration.clientId}:{configuration.clientSecret}";
             var base64AuthString = Convert.ToBase64String(Encoding.UTF8.GetBytes(authString));
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            var contentString = await content.ReadAsStringAsync();
+            var contentNameValueCollection = HttpUtility.ParseQueryString(contentString);
+            WWWForm wwwForm = new();
+
+            foreach (string key in contentNameValueCollection) {
+                wwwForm.AddField(key, contentNameValueCollection[key]);
+            }
+
+            UnityWebRequest tokenRequest = UnityWebRequest.Post(accessTokenUrl, wwwForm);
+            tokenRequest.SetRequestHeader("Accept", "application/json");
+            tokenRequest.SetRequestHeader("Authorization", $"Basic {base64AuthString}");
+            tokenRequest.downloadHandler = new DownloadHandlerBuffer();
+#else
             var tokenRequest = new HttpRequestMessage(HttpMethod.Post, accessTokenUrl);
             tokenRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", base64AuthString);
             tokenRequest.Content = content;
+#endif
 
 #if UNITY_EDITOR
             Debug.Log($"{tokenRequest}");
             Debug.Log($"{await tokenRequest.Content.ReadAsStringAsync()}");
 #endif
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            await RequestEnd(tokenRequest, cancellationToken);
+
+            if (tokenRequest.result == UnityWebRequest.Result.Success) {
+                var responseJson = tokenRequest.downloadHandler.text;
+                var tokenResponse = JsonConvert.DeserializeObject<AccessTokenResponse>(responseJson);
+                tokenResponse.issuedAt = DateTime.UtcNow;
+                return tokenResponse;
+            }
+#else
             var response = await httpClient.SendAsync(tokenRequest, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
@@ -264,11 +290,16 @@ namespace Cdm.Authentication.OAuth2
                 tokenResponse.issuedAt = DateTime.UtcNow;
                 return tokenResponse;
             }
-
+#endif
+            
             AccessTokenRequestError error = null;
             try
             {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                var errorJson = tokenRequest.downloadHandler.error;
+#else
                 var errorJson = await response.Content.ReadAsStringAsync();
+#endif
                 error = JsonConvert.DeserializeObject<AccessTokenRequestError>(errorJson);
             }
             catch (Exception)
@@ -276,7 +307,25 @@ namespace Cdm.Authentication.OAuth2
                 // ignored
             }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+            throw new AccessTokenRequestException(error, null);
+#else
             throw new AccessTokenRequestException(error, response.StatusCode);
+#endif
+        }
+
+        private static async Task RequestEnd(UnityWebRequest request, CancellationToken cancellationToken = default)
+        {
+            request.SendWebRequest();
+
+            while (!request.isDone) {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                await Task.Yield();
+            }
         }
 
         public void Dispose()
