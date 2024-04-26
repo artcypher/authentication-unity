@@ -21,6 +21,7 @@ namespace Cdm.Authentication.Utils
             UnityWebRequest request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Accept", "application/json");
             request.SetRequestHeader("Authorization", authenticationHeaderString);
+            request.downloadHandler = new DownloadHandlerBuffer();
 #else
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
